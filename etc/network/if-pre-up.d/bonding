@@ -1,0 +1,38 @@
+#!/bin/bash
+
+# This script calls the storiq bonding command line
+# interface for init $IFACE bond interface.
+# Made by Alexandre Boutonnet
+
+
+# if [ ! `grep -v \# /etc/storiq/bonding.conf | grep -v 'slaves' | grep \$IFACE\]` ]; then
+#     exit 0
+# fi
+
+ALLBONDS=`/usr/sbin/bonding_cli list_bonding`
+
+if [ $IFACE = '--all' ]; then
+	IFACE=$ALLBONDS
+fi
+
+
+
+# Je commente ce bout de code pour la correction du bug #278
+#BOND_MASTER='/sys/class/net/bonding_masters'
+#if [ ! -e $BOND_MASTER ]; then
+#    echo
+#    echo -e "\tLoading Bonding module"
+#    modprobe bonding
+#    echo -bond0 > $BOND_MASTER
+#fi
+
+for THIS in $IFACE; do
+	if [ `echo $ALLBONDS | grep $THIS` ]; then
+		# Initialisation du bonding..
+		/usr/sbin/bonding_cli init $THIS script
+
+		# Je demarre ici l'interface du bonding pour gerer le
+		# cas pourri du dhcp
+		/usr/sbin/bonding_cli start $THIS script
+	fi
+done

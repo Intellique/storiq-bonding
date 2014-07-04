@@ -1,0 +1,8 @@
+/var/log/storiq/bonding.log {
+	rotate 7
+	monthly
+	compress
+	missingok
+	notifempty
+}
+

@@ -1,0 +1,20 @@
+#!/bin/bash
+
+# This script calls the storiq bonding command line
+# interface for stopping $IFACE bond interface.
+
+
+ALLBONDS=`/usr/sbin/bonding_cli list_bonding`
+
+if [ $IFACE = '--all' ]; then
+	IFACE=$ALLBONDS
+fi
+
+for THIS in $IFACE; do
+	if [ `echo $ALLBONDS | grep $THIS` ]; then
+			/usr/sbin/bonding_cli stop $THIS script	
+	fi
+done
+
+
+

@@ -1,0 +1,2 @@
+/etc/storiq/bonding.conf
+/etc/logrotate.d/bonding_cli

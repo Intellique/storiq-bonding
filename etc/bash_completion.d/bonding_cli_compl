@@ -1,0 +1,131 @@
+#-*- mode: shell-script;-*-
+
+# Bonding completion for Intellique
+#
+have bonding_cli &&
+_bonding_cli() {
+	local cur prev special i options
+
+	cur=${COMP_WORDS[COMP_CWORD]}
+	prev=${COMP_WORDS[COMP_CWORD-1]}
+
+	for (( i=0; i < ${#COMP_WORDS[@]}-1; i++ )); do
+		if [[ ${COMP_WORDS[i]} == @(addif|create|delete|help|deleteif|setoption|setmode|start|stop|status) ]]; then
+			special=${COMP_WORDS[i]}
+		fi
+	done
+
+	if [ -n "$special" ]; then
+
+		case $special in
+		delete|start|stop)
+			if [[ "$prev" != "delete" && "$prev" != "start" && "$prev" != "stop" ]]; then
+                		return 0
+            		fi
+            		if [[ "$cur" != "" ]]; then
+                		COMPREPLY=( $( bonding_cli list_bonding | grep ^$cur ) )
+            		else
+                		COMPREPLY=( $( bonding_cli list_bonding ) )
+            		fi
+			return 0
+			;;
+		addif)
+			if [[ "$prev" == "addif" ]]; then
+				if [[ "$cur" != "" ]]; then
+                			COMPREPLY=( $( bonding_cli list_bonding | grep ^$cur ) )
+            			else
+                			COMPREPLY=( $( bonding_cli list_bonding ) )
+            			fi
+                		return 0
+            		fi
+			
+			
+			if [[ "$cur" != "" ]]; then
+                		COMPREPLY=( $( bonding_cli list_free_iface | grep ^$cur ) )
+            		else
+				COMPREPLY=( $( bonding_cli list_free_iface ) )
+            		fi
+
+			return 0
+			;;
+		deleteif)
+			if [[ "$prev" == "deleteif" ]]; then
+				if [[ "$cur" != "" ]]; then
+                			COMPREPLY=( $( bonding_cli list_bonding | grep ^$cur ) )
+            			else
+                			COMPREPLY=( $( bonding_cli list_bonding ) )
+            			fi
+                		return 0
+            		fi
+
+			if [[ ${COMP_WORDS[COMP_CWORD-2]} != "deleteif" ]]; then
+				return 0
+			fi
+			
+			if [[ "$cur" != "" ]]; then
+                		COMPREPLY=( $( bonding_cli list_slave_iface $prev | grep ^$cur ) )
+            		else
+				COMPREPLY=( $( bonding_cli list_slave_iface $prev ) )
+            		fi
+
+			return 0
+			;;
+		setoption)
+			if [[ "$prev" == "setoption" ]]; then
+				if [[ "$cur" != "" ]]; then
+                			COMPREPLY=( $( bonding_cli list_bonding | grep ^$cur ) )
+            			else
+                			COMPREPLY=( $( bonding_cli list_bonding ) )
+            			fi
+                		return 0
+            		fi
+
+			if [[ ${COMP_WORDS[COMP_CWORD-2]} != "setoption" ]]; then
+				return 0
+			fi
+			
+			if [[ "$cur" != "" ]]; then
+                		COMPREPLY=( $( bonding_cli list_option | grep ^$cur ) )
+            		else
+				COMPREPLY=( $( bonding_cli list_option ) )
+            		fi
+
+			return 0
+			;;
+		setmode)
+			if [[ "$prev" == "setmode" ]]; then
+				if [[ "$cur" != "" ]]; then
+                			COMPREPLY=( $( bonding_cli list_bonding | grep ^$cur ) )
+            			else
+                			COMPREPLY=( $( bonding_cli list_bonding ) )
+            			fi
+                		return 0
+            		fi
+
+			if [[ ${COMP_WORDS[COMP_CWORD-2]} != "setmode" ]]; then
+				return 0
+			fi
+			
+			if [[ "$cur" != "" ]]; then
+                		COMPREPLY=( $( bonding_cli list_mode | grep ^$cur ) )
+            		else
+				COMPREPLY=( $( bonding_cli list_mode ) )
+            		fi
+
+			return 0
+			;;		
+		help|status|create)
+			return 0
+			;;
+		*)
+			return 0
+			;;
+		esac
+	fi
+
+	COMPREPLY=( $( compgen -W 'addif create delete help deleteif setoption setmode start stop status' -- $cur ) )
+	
+	return 0
+}
+			    
+[ -n "${have:-}" ] && complete -F _bonding_cli $filenames bonding_cli
