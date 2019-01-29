@@ -81,9 +81,9 @@ sub print_and_exit {
 # Fonction d'ajout d'une interface esclave dans un bonding
 sub addif {
     print_and_exit('Bond parameter is missing : show help')
-        unless @_ > 0;
+      unless @_ > 0;
     print_and_exit('Ethernet interface parameter is missing : show help')
-        unless @_ > 1;
+      unless @_ > 1;
 
     my ( $bond, @eth ) = @_;
     my ( $err, $err_msg ) = $OBJ_BOND->add_if( $bond, @eth );
@@ -95,13 +95,13 @@ sub addif {
 # Fonction de creation d'un bonding
 sub create {
     print_and_exit('Bond parameter is missing : show help')
-        unless @_ > 0;
+      unless @_ > 0;
 
     my $bond = shift;
 
     # Correction du bug #236 (seulement via le bonding_cli)
     print_and_exit('Bond name too long (max size 9 chars)')
-        if length($bond) > 9;
+      if length($bond) > 9;
 
     my ( $err, $err_msg ) = $OBJ_BOND->create($bond);
     print_and_exit($err_msg) if ($err);
@@ -112,7 +112,7 @@ sub create {
 # Fonction de suppression d'un bond
 sub delete_bond {
     print_and_exit('Bond parameter is missing : show help')
-        unless @_ > 0;
+      unless @_ > 0;
 
     my $bond = shift;
     my ( $err, $err_msg ) = $OBJ_BOND->delete($bond);
@@ -124,9 +124,9 @@ sub delete_bond {
 # Fonction de suppression d'une interface esclave dans un bond
 sub delif {
     print_and_exit('Bond parameter is missing : show help')
-        unless @_ > 0;
+      unless @_ > 0;
     print_and_exit('Ethernet interface parameter is missing : show help')
-        unless @_ > 1;
+      unless @_ > 1;
 
     my ( $bond, @eth ) = @_;
 
@@ -170,7 +170,7 @@ EOF
 # Fonction d'initialisation d'une interface.
 sub init {
     print_and_exit('Bond parameter is missing : show help')
-        unless @_ > 0;
+      unless @_ > 0;
 
     my ( $bond, $hidden_opt ) = @_;
     $hidden_opt = '' unless defined($hidden_opt);
@@ -178,11 +178,10 @@ sub init {
     my ( $err, $bond_tab ) = $OBJ_BOND->get_masters();
     print_and_exit($bond_tab) if ($err);
 
-    if ( grep {/^$bond$/} @{$bond_tab} ) {
+    if ( grep { /^$bond$/ } @{$bond_tab} ) {
         if ( $hidden_opt eq 'script' ) {
             exit;
-        }
-        else {
+        } else {
             print("Bond $bond is already initialized\n");
             exit;
         }
@@ -209,10 +208,10 @@ sub init {
 # Fonction de listing des bondings actuellement crees..
 # Fonction non documentee utilisee uniquement par la completion..
 sub list_bonding {
-    my ( $error, $tab ) = $OBJ_BOND->get_masters();
+    my ( $error, $tab ) = $OBJ_BOND->list_bonds();
     print_and_exit($tab) if ($error);
 
-    foreach my $bond ( @{$tab} ) {
+    foreach my $bond ( sort @{$tab} ) {
         print "$bond\n";
     }
     exit;
@@ -295,9 +294,9 @@ sub list_slave_iface {
 # Fonction de configuration du mode d'un bond
 sub setmode {
     print_and_exit('Bond parameter is missing : show help')
-        unless @_ > 0;
+      unless @_ > 0;
     print_and_exit('Mode parameter is missing : show help')
-        unless @_ > 1;
+      unless @_ > 1;
 
     my ( $bond, $mode ) = @_;
 
@@ -310,11 +309,11 @@ sub setmode {
 # Fonction de configuration d'une option d'un bond
 sub setoption {
     print_and_exit('Bond parameter is missing : show help')
-        unless @_ > 0;
+      unless @_ > 0;
     print_and_exit('Option parameter is missing : show help')
-        unless @_ > 1;
+      unless @_ > 1;
     print_and_exit('Option value parameter is missing : show help')
-        unless @_ > 2;
+      unless @_ > 2;
 
     my ( $bond, $opt, $value ) = @_;
 
@@ -327,7 +326,7 @@ sub setoption {
 # Fonction de setup d'une interface.
 sub start {
     print_and_exit('Bond parameter is missing : show help')
-        unless @_ > 0;
+      unless @_ > 0;
 
     my ( $bond, $hidden_opt ) = @_;
     $hidden_opt = '' unless defined($hidden_opt);
@@ -335,31 +334,40 @@ sub start {
     my ( $err, $bond_tab ) = $OBJ_BOND->get_masters();
     print_and_exit($bond_tab) if ($err);
 
-    if ( !grep {/^$bond$/} @$bond_tab ) {
+    if ( !grep { /^$bond$/ } @$bond_tab ) {
         if ( $hidden_opt eq 'script' ) {
             exit;
-        }
-        else {
+        } else {
             print_and_exit("$bond is not a valid bond");
         }
     }
 
+    # skip if already up
+    ( $err, my $status ) = $OBJ_BOND->status();
+    print_and_exit($status) if ($err);
+
     my $err_msg;
-    ( $err, $err_msg ) = $OBJ_BOND->start($bond);
-    print_and_exit($err_msg) if ($err);
 
-    # Si je ne suis pas exec par ifup
-    # Je dois lancer moi meme l'interface
-    if ( $hidden_opt ne 'script' ) {
-        ( $err, $err_msg ) = Lib_Network::ifup($bond);
-        return ( $err, $err_msg ) if ($err);
+    if ( $status->{$bond}{Status} ne 'up' ) {
+
+        ( $err, $err_msg ) = $OBJ_BOND->start($bond);
+        print_and_exit($err_msg) if ($err);
+
+        # Si je ne suis pas exec par ifup
+        # Je dois lancer moi meme l'interface
+        if ( $hidden_opt ne 'script' ) {
+            ( $err, $err_msg ) = Lib_Network::ifup($bond);
+            return ( $err, $err_msg ) if ($err);
+        }
+
+        # Je desactive le verbose lors des scripts d'init
+        print "Bond $bond started successfully\n"
+          if ( $hidden_opt ne 'script' );
+
+        $OBJ_LOG->info("Bonding_cli : $bond started successfully");
+    } else {
+        print "Bond $bond already started\n" if ( $hidden_opt ne 'script' );
     }
-
-    # Je desactive le verbose lors des scripts d'init
-    # print "\t" if ($hidden_opt eq "script");
-    print "Bond $bond started successfully\n" if ( $hidden_opt ne 'script' );
-
-    $OBJ_LOG->info("Bonding_cli : $bond started successfully");
     exit;
 }
 
@@ -374,12 +382,12 @@ sub status {
 
         print "\tMode : ";
         print $status->{$bond}->{'Mode'}
-            if ( defined $status->{$bond}->{'Mode'} );
+          if ( defined $status->{$bond}->{'Mode'} );
         print "\n";
 
         print "\tSlaves : ";
         print join( " ", @{ $status->{$bond}->{'Slaves'} } )
-            if ( defined $status->{$bond}->{'Slaves'} );
+          if ( defined $status->{$bond}->{'Slaves'} );
         print "\n";
 
         print "\tStatus : ";
@@ -390,12 +398,10 @@ sub status {
             print "\tIP Address : ";
             if ( defined $status->{$bond}->{'IP Address'} ) {
                 print $status->{$bond}->{'IP Address'} . "\n";
-            }
-            else {
+            } else {
                 print "none\n";
             }
-        }
-        else {
+        } else {
             print "down\n";
         }
 
@@ -406,7 +412,7 @@ sub status {
 # Fonction de setup d'une interface.
 sub stop {
     print_and_exit('Bond parameter is missing : show help')
-        unless @_ > 0;
+      unless @_ > 0;
 
     my ( $bond, $hidden_opt ) = @_;
     $hidden_opt = '' unless defined($hidden_opt);
@@ -414,12 +420,11 @@ sub stop {
     my ( $err, $bond_tab ) = $OBJ_BOND->get_masters();
     print_and_exit($bond_tab) if ($err);
 
-    if ( grep {/^$bond$/} @{$bond_tab} ) {
+    if ( grep { /^$bond$/ } @{$bond_tab} ) {
         if ( $hidden_opt eq 'script' ) {
             exit;
         }
-    }
-    else {
+    } else {
         print_and_exit("$bond is not a valid bond");
     }
 
@@ -442,7 +447,7 @@ sub version {
 
 # Chargement du module du bonding
 # Correction du bug #278
-if ( ( grep {/^bonding/} qx#/sbin/lsmod# ) == 0 ) {
+if ( ( grep { /^bonding/ } qx#/sbin/lsmod# ) == 0 ) {
     my $ret_var = qx#/sbin/modprobe bonding 2>&1#;
     if ($ret_var) {
         print "Bonding loading error : \n$ret_var\n";
@@ -462,12 +467,10 @@ my ( $command, @param ) = @ARGV;
 if ( defined($command) ) {
     if ( exists $commands->{$command} ) {
         $commands->{$command}->(@param);
-    }
-    else {
+    } else {
         help();
     }
-}
-else {
+} else {
     status();
 }
 

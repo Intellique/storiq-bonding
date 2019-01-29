@@ -11,7 +11,7 @@ if [ $IFACE = '--all' ]; then
 fi
 
 for THIS in $IFACE; do
-	if [ `echo $ALLBONDS | grep $THIS` ]; then
+	if [ ! -z "`echo $ALLBONDS | grep $THIS`" ]; then
 			/usr/sbin/bonding_cli stop $THIS script	
 	fi
 done
